@@ -49,9 +49,9 @@ class CosSim2d(nn.Module):
         nn.init.xavier_normal_(w)
         self.w = nn.Parameter(w.view(out_channels, in_channels, -1), requires_grad=True)
         
-        self.register_buffer("p", torch.empty(out_channels))
-        nn.init.constant_(self.p, 2)
-        
+        self.register_parameter("p", nn.Parameter(torch.empty(out_channels)))
+        nn.init.constant_(self.p, 1)
+
     
         
     def forward(self, x):
@@ -59,7 +59,51 @@ class CosSim2d(nn.Module):
 
 
 
+def scs3x3(inp, out, stride=1):
+  return nn.Sequential(
+    # nn.BatchNorm2d(inp),
+    CosSim2d(inp, out, kernel_size=3, padding=1, stride=stride)
+  )
+
+class ScsNet(nn.Module):
+  def __init__(self, num_classes=10, features=32):
+    super(ScsNet, self).__init__()
+        
+    self.module = nn.Sequential(
+      CosSim2d(3, features, kernel_size=3, padding=1),
+
+      scs3x3(features, features),
+      scs3x3(features, features*2, stride=2),
+
+      scs3x3(features*2, features*2),
+      scs3x3(features*2, features*4, stride=2),
+
+      scs3x3(features*4, features*4),
+      scs3x3(features*4, features*8, stride=2),
+
+      scs3x3(features*8, features*8),
+      scs3x3(features*8, features*8),
+
+      nn.AdaptiveAvgPool2d((1, 1)),
+      nn.Flatten(),
+
+      # nn.BatchNorm1d(features*8),
+
+      nn.Linear(features * 8, num_classes)
+    )
+
+  def forward(self, x):
+    return self.module(x)
+
 if __name__ == '__main__':
     layer = CosSim2d(4, 8, 7, 2, padding=3).cuda()
     data = torch.randn(10, 4, 128, 128).cuda()
+
+
     print(layer(data).shape)
+
+    net = ScsNet().cuda()
+    data = torch.randn(10, 3, 32, 32).cuda()
+
+    print(net(data).shape)
+

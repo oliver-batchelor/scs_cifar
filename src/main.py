@@ -1,5 +1,6 @@
 import math
 import os
+from src.scs import ScsNet
 
 import torch
 import torch.nn as nn
@@ -35,8 +36,7 @@ def dataloaders():
   train_transforms = transforms.Compose(
       [
           transforms.RandomCrop(32, padding=4),
-          transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.2),
-
+          # transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.2),
 
           transforms.RandomHorizontalFlip(),
           transforms.ToTensor(),
@@ -81,7 +81,7 @@ class LitResnet(LightningModule):
     super().__init__()
 
     self.save_hyperparameters()
-    self.model = resnet18(num_classes = 10)
+    self.model = ScsNet(num_classes = 10)
 
   def forward(self, x):
     out = self.model(x)
@@ -140,10 +140,10 @@ class LitResnet(LightningModule):
 if __name__ == "__main__":
   seed_everything(7)
 
-  model = LitResnet(lr=0.0001)
+  model = LitResnet(lr=0.001)
 
   trainer = Trainer(
-      max_epochs=100,
+      max_epochs=10,
       gpus=num_gpus,
       sync_batchnorm=True,
       precision=32,
